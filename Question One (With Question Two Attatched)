@@ -1,0 +1,122 @@
+
+from random import randint
+from graphics import *
+
+class Die:
+    def roll(self):
+        return randint(1, 6)
+
+
+class Player:
+    def __init__(self, name):
+        self.name = name
+        self.chips = 3
+
+    def roll_dice(self, dice):
+        results = []
+        for i in range(min(self.chips, 3)):
+            results.append(dice.roll())
+        return results
+
+
+class Pot:
+    def __init__(self):
+        self.chips = 0
+
+    def add_chip(self):
+        self.chips += 1
+
+
+class TextInterface:
+    def display(self, message):
+        print(message)
+
+    def get_names(self):
+        names = input("Enter player names separated by commas: ")
+        return [name.strip() for name in names.split(",")]
+
+    def show_players(self, players, pot):
+        for player in players:
+            print(player.name, ":", player.chips, "chips")
+        print("Center pot:", pot.chips)
+
+
+class GraphicalInterface:
+    def display(self, message):
+        print(message)
+
+    def get_names(self):
+        return ["Player 1", "Player 2", "Player 3"]
+
+    def show_players(self, players, pot):
+        win = GraphWin("LCR Game", 400, 300)
+        message = "Center Pot: " + str(pot.chips) + "\n"
+        for player in players:
+            message += player.name + ": " + str(player.chips) + " chips\n"
+
+        Text(Point(200, 150), message).draw(win)
+        win.getMouse()
+        win.close()
+
+
+class LCRGame:
+    def __init__(self, interface):
+        self.interface = interface
+        self.dice = Die()
+        self.pot = Pot()
+        self.players = []
+
+    def setup(self):
+        names = self.interface.get_names()
+        if len(names) < 3:
+            raise ValueError("LCR requires at least three players.")
+
+        self.players = [Player(name) for name in names]
+
+    def play(self):
+        self.setup()
+        current = 0
+
+        while sum(p.chips > 0 for p in self.players) > 1:
+            player = self.players[current]
+
+            if player.chips > 0:
+                self.interface.display(
+                    player.name + "'s turn."
+                )
+
+                results = player.roll_dice(self.dice)
+
+                for result in results:
+                    if result == 1:
+                        player.chips -= 1
+                        self.players[(current - 1) %
+                                     len(self.players)].chips += 1
+
+                    elif result == 2:
+                        player.chips -= 1
+                        self.players[(current + 1) %
+                                     len(self.players)].chips += 1
+
+                    elif result == 3:
+                        player.chips -= 1
+                        self.pot.add_chip()
+
+                self.interface.show_players(
+                    self.players, self.pot
+                )
+
+            current = (current + 1) % len(self.players)
+
+        winner = next(p for p in self.players if p.chips > 0)
+        winner.chips += self.pot.chips
+
+        self.interface.display(
+            winner.name + " wins the game!"
+        )
+        self.interface.show_players(self.players, self.pot)
+
+
+if __name__ == "__main__":
+    game = LCRGame(TextInterface())
+    game.play()
