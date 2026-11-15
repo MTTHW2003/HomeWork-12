@@ -1,0 +1,62 @@
+
+from graphics import *
+from time import sleep
+
+class Ball:
+    def __init__(self, win, x, y, color):
+        self.win = win
+        self.radius = 15
+        self.x = x
+        self.y = y
+        self.velocity = 0
+        self.gravity = 9.8
+        self.restitution = 0.60
+
+        self.shape = Circle(
+            Point(x, y), self.radius
+        )
+        self.shape.setFill(color)
+        self.shape.draw(win)
+
+    def move(self, dt):
+        self.velocity += self.gravity * dt
+        self.y += self.velocity * dt
+
+        # Bounce when the ball reaches the floor
+        if self.y + self.radius >= 400:
+            self.y = 400 - self.radius
+            self.velocity = -self.velocity * self.restitution
+
+        # Move the graphical ball
+        current_y = self.shape.getCenter().getY()
+        self.shape.move(0, self.y - current_y)
+
+
+def main():
+    win = GraphWin("Three Bouncing Balls", 600, 400)
+    win.setCoords(0, 400, 600, 0)
+
+    # Create three balls
+    ball1 = Ball(win, 150, 100, "red")
+    ball2 = Ball(win, 300, 150, "blue")
+    ball3 = Ball(win, 450, 200, "green")
+
+    balls = [ball1, ball2, ball3]
+
+    dt = 0.02
+
+    # Animate all three balls
+    while True:
+        for ball in balls:
+            ball.move(dt)
+
+        sleep(dt)
+
+        if win.checkMouse():
+            break
+
+    win.close()
+
+
+if __name__ == "__main__":
+    main()
