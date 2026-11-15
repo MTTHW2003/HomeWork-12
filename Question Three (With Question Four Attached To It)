@@ -1,0 +1,177 @@
+
+from random import randint
+from graphics import *
+
+
+class Die:
+    def roll(self):
+        return randint(1, 6)
+
+
+class DiceCup:
+    def __init__(self):
+        self.dice = [Die() for i in range(5)]
+        self.values = [0] * 5
+        self.locked = [False] * 5
+
+    def roll_unlocked(self):
+        for i in range(5):
+            if not self.locked[i]:
+                self.values[i] = self.dice[i].roll()
+        return self.values
+
+    def lock_die(self, value):
+        for i in range(5):
+            if not self.locked[i] and self.values[i] == value:
+                self.locked[i] = True
+                return True
+        return False
+
+    def cargo_score(self):
+        return sum(
+            self.values[i]
+            for i in range(5)
+            if not self.locked[i]
+        )
+
+
+class Player:
+    def __init__(self, name):
+        self.name = name
+        self.score = 0
+
+    def take_turn(self, cup, interface):
+        cup.locked = [False] * 5
+        stage = 6
+
+        for attempt in range(3):
+            values = cup.roll_unlocked()
+            interface.show_roll(self.name, attempt + 1, values)
+
+            if stage == 6:
+                if cup.lock_die(6):
+                    stage = 5
+                else:
+                    continue
+
+            elif stage == 5:
+                if cup.lock_die(5):
+                    stage = 4
+                else:
+                    continue
+
+            elif stage == 4:
+                if cup.lock_die(4):
+                    stage = 0
+
+            if stage == 0:
+                self.score = cup.cargo_score()
+
+        if stage != 0:
+            self.score = 0
+
+        return self.score
+
+
+class TextInterface:
+    def display(self, message):
+        print(message)
+
+    def get_players(self):
+        number = int(input("Enter number of players (2 or more): "))
+        if number < 2:
+            raise ValueError("At least two players are required.")
+
+        return [
+            Player("Player " + str(i + 1))
+            for i in range(number)
+        ]
+
+    def show_roll(self, name, attempt, values):
+        print(name, "Roll", attempt, ":", values)
+
+    def show_scores(self, players):
+        print("\nFinal Scores:")
+        for player in players:
+            print(player.name, ":", player.score)
+
+    def announce_winner(self, winners):
+        names = ", ".join(p.name for p in winners)
+        print("Winner:", names)
+
+
+class GraphicalInterface:
+    def display(self, message):
+        print(message)
+
+    def get_players(self):
+        return [
+            Player("Player 1"),
+            Player("Player 2")
+        ]
+
+    def show_roll(self, name, attempt, values):
+        win = GraphWin("Ship Captain and Crew", 400, 200)
+        message = (
+            name + "\nRoll " + str(attempt) +
+            "\nDice: " + str(values)
+        )
+        Text(Point(200, 100), message).draw(win)
+        win.getMouse()
+        win.close()
+
+    def show_scores(self, players):
+        win = GraphWin("Final Scores", 400, 250)
+
+        message = "Final Scores\n\n"
+        for player in players:
+            message += (
+                player.name + ": " +
+                str(player.score) + "\n"
+            )
+
+        Text(Point(200, 125), message).draw(win)
+        win.getMouse()
+        win.close()
+
+    def announce_winner(self, winners):
+        names = ", ".join(p.name for p in winners)
+        self.display("Winner: " + names)
+
+
+class ShipCaptainCrewGame:
+    def __init__(self, interface):
+        self.interface = interface
+        self.players = []
+        self.cup = DiceCup()
+
+    def play(self):
+        self.players = self.interface.get_players()
+
+        while True:
+            for player in self.players:
+                player.take_turn(self.cup, self.interface)
+
+            self.interface.show_scores(self.players)
+
+            high_score = max(p.score for p in self.players)
+
+            winners = [
+                p for p in self.players
+                if p.score == high_score
+            ]
+
+            if len(winners) == 1:
+                self.interface.announce_winner(winners)
+                break
+
+            self.interface.display(
+                "There is a tie! The tied players will play again."
+            )
+
+            self.players = winners
+
+
+if __name__ == "__main__":
+    game = ShipCaptainCrewGame(TextInterface())
+    game.play()
